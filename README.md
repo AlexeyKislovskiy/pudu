@@ -10,3 +10,4 @@
   - [Работа со средами](quick_start.md#работа-со-средами)
 - [Robot Description](robot_description.md#robot-description)
 - [Robot in Gazebo](robot_gazebo.md#robot-in-Gazebo)
+- [Robot Control](robot_control.md#robot-control)

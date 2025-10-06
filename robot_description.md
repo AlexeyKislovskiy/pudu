@@ -4,6 +4,9 @@
 ## Оглавление
 - [Создание проекта](#создание-проекта)
 - [Создание базы робота](#создание-базы-робота)
+- [Добавление колес](#добавление-колес)
+  - [Линейное движение](#линейное-движение)
+  - [Вращательное движение (рулевое колесо)](#вращательное-движение-рулевое-колесо)
 - [Настройка проекта](#настройка-проекта)
   - [Подготовка CMakeLists.txt](#подготовка-cmakeliststxt)
   - [Настройка файла запуска (launch)](#настройка-файла-запуска-launch)
@@ -63,7 +66,7 @@ bmx_description/
 
 ## Создание базы робота
 
-Перейдем к созданию базы робота или шасси, на которую будем крепить остальные элементы. Создадим файл **base.urdf.xacro** в директории *urdf/components/base/base.urdf.xacro*. Оформим XML как параметризированный компонент, или макрос.
+Перейдем к созданию базы робота или шасси, на которую будем крепить остальные элементы. Создадим файл **base.urdf.xacro** в директории *urdf/components/base*. Оформим XML как параметризированный компонент, или макрос.
 
 ```xml
 <?xml version="1.0"?>
@@ -93,6 +96,10 @@ bmx_description/
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
+    <xacro:property name="base_length" value="0.5"/>
+    <xacro:property name="base_thickness" value="0.1"/>
+    <xacro:property name="base_height" value="0.3"/>
+
     <xacro:macro name="base">
         
         ...
@@ -101,13 +108,13 @@ bmx_description/
             <visual>
                 <origin xyz="0 0 0" rpy="0.0 0.0 0.0" />
                 <geometry>
-                    <box size="0.5 0.1 0.3"/>
+                    <box size="${base_length} ${base_thickness} ${base_height}"/>
                 </geometry>
             </visual>
             <collision>
                 <origin xyz="0 0 0" rpy="0.0 0.0 0.0" />
                 <geometry>
-                    <box size="0.5 0.1 0.3"/>
+                    <box size="${base_length} ${base_thickness} ${base_height}"/>
                 </geometry>
             </collision>
             <inertial>
@@ -126,10 +133,13 @@ bmx_description/
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
+    ...
+    <xacro:property name="clearance" value="0.05"/>
+
     <xacro:macro name="base">
         ...
         <joint name="base_link_joint" type="fixed">
-            <origin xyz="0.0 0.0 0.15" rpy="0.0 0.0 0.0"/>
+            <origin xyz="0.0 0.0 ${base_height/2 + clearance}" rpy="0.0 0.0 0.0"/>
             <parent link="base_footprint"/>
             <child link="base_link"/>
         </joint>
@@ -137,7 +147,7 @@ bmx_description/
 </robot>
 ```
 
-Создадим модель робота. Для этого в папке *urdf/robots/bmx.urdf.xacro* создадим файл **bmx.urdf.xacro**. В файле укажем в виде аргументов название робота, пространство имен, а также подключим макрос базы, который мы написали.
+Создадим модель робота. Для этого в папке *urdf/robots* создадим файл **bmx.urdf.xacro**. В файле укажем в виде аргументов название робота, пространство имен, а также подключим макрос базы, который мы написали.
 
 ```xml
 <?xml version="1.0"?>
@@ -148,6 +158,276 @@ bmx_description/
     <xacro:include filename="$(find bmx_description)/urdf/components/base/base.urdf.xacro" />
 
     <xacro:base />
+</robot>
+```
+
+## Добавление колес
+
+> К этому пункту можно вернуться позднее, убедившись, что робот успешно запускается в Gazebo
+
+На нашем велосипеде 2 колеса: переднее (с двумя осями вращения) и заднее (с одной осью вращения). Зададим отдельно два типа сустава:
+- сустав с осью вращения Y (который будет создавать линейную скорость)
+- сустав с осью вращения Z (будет создавать угловую скорость), который будет являться рулевым колесом.
+
+Оба колеса запрограммируем как макросы. Создадим файлы **wheel.urdf.xacro** и **steering_wheel.urdf.xacro** по пути *bmx_description/urdf/components/wheels*. 
+
+### Линейное движение
+
+Начнем с колеса с осью вращения Y (файл **wheel.urdf.xacro**). В качестве аргументов будем передавать префикс имени сустава/соединения и имя родительского соединения, с которым будем соединять колесо. Назовем наш макрос "wheel". 
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:macro name="wheel" params="prefix parent">
+
+    </xacro:macro>
+</robot>
+```
+
+Добавим соединение в наш макрос. Наше соединение будет представлять из себя цилиндр, повернутый на pi/2 по оси Х. Таким образом мы моделируем наше колесо. Сделаем пока одинаковыми визуальную и коллизионную модели. Цилиндр зададим радиусом 0.1 м и высотой также 0.1 м.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:macro name="wheel" params="prefix parent">
+
+        <link name="${prefix}_wheel_link">
+            <visual>
+                <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+                <geometry>
+                    <cylinder radius="0.1" length="0.1"/>
+                </geometry>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+                <geometry>
+                    <cylinder radius="0.1" length="0.1"/>
+                </geometry>
+            </collision>
+        </link>
+
+    </xacro:macro>
+</robot>
+```
+
+Заметим, что любой цилиндр мы можем задать радиусом круга и высотой (что и характеризует наше колесо), поэтому сразу вынесем эти параметры в аргументы.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+
+    <xacro:property name="wheel_radius" value="0.1"/>
+    <xacro:property name="wheel_length" value="0.1"/>
+
+    <xacro:macro name="wheel" params="prefix parent">
+
+        <link name="${prefix}_wheel_link">
+            <visual>
+                <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+                <geometry>
+                    <cylinder radius="${wheel_radius}" length="${wheel_length}"/>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+                <geometry>
+                    <cylinder radius="${wheel_radius}" length="${wheel_length}"/>
+                </geometry>
+            </collision>
+        </link>
+
+    </xacro:macro>
+</robot>
+```
+
+Зададим момент инерции цилиндра, в виде которого представлено наше колесо. Для этого воспользуемся [формулой расчета момента инерции для сплошного цилиндра](https://ru.wikipedia.org/wiki/%D0%A1%D0%BF%D0%B8%D1%81%D0%BE%D0%BA_%D0%BC%D0%BE%D0%BC%D0%B5%D0%BD%D1%82%D0%BE%D0%B2_%D0%B8%D0%BD%D0%B5%D1%80%D1%86%D0%B8%D0%B8), предварительно создав также переменную, хранящую массу колеса:
+- I_x = I_y = 1/12 * M * (3 * R^2 + L^2)
+- I_z = 1/2 * M * R^2
+где M - масса цилиндра, R - радиус цилиндра, L - высота цилиндра.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+
+    <xacro:property name="wheel_radius" value="0.1"/>
+    <xacro:property name="wheel_length" value="0.1"/>
+    <xacro:property name="wheel_mass" value="3.0"/>
+
+    <xacro:macro name="wheel" params="prefix parent">
+
+        <link name="${prefix}_wheel_link">
+            ...
+            <inertial>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <mass value="${wheel_mass}"/>
+                <inertia ixx="${(3*wheel_radius**2+wheel_length**2)*wheel_mass*1/12}" ixy="0.0" ixz="0.0"
+                        iyy="${(3*wheel_radius**2+wheel_length**2)*wheel_mass*1/12}" iyz="0.0"
+                        izz="${(wheel_mass*wheel_radius**2)*1/2}"/>
+            </inertial> 
+        </link>
+
+    </xacro:macro>
+</robot>
+```
+
+Наш цилиндр необходимо соединить с базой робота. Для этого создадим сустав, указав в качестве родительского соединения аргумент макроса "parent" и название созданного колеса в качестве дочернего соединения. Укажем также ось вращения с помощью тега \<axis\>. Поскольку наше колесо будет вращаться относительно оси Y, зададим единичный вектор вращения следующим образом: ```<axis xyz="0 1 0" />```. Зададим также параметры динамики - укажем коэффициент вязкого демпфирования для предотвращения колебаний объекта: ```<dynamics damping="0.2"/>```.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    ...
+
+    <xacro:macro name="wheel" params="prefix parent">
+
+        <joint name="${prefix}_wheel_joint" type="continuous">
+            <parent link="${parent}"/>
+            <child link="${prefix}_wheel_link"/>
+            <axis xyz="0 1 0"/>
+            <dynamics damping="0.2"/>
+        </joint>
+
+        ...
+
+    </xacro:macro>
+</robot>
+```
+
+Наконец, необходимо указать, где будет находиться сам сустав. По умолчанию сустав соединяет центр родительского и дочернего объекта. Эта позиция будет разной для переднего и заднего колеса. Отсюда вытекает необходимость передачи этой позиции в виде еще одного аргумента для нашего макроса. Добавим аргумент "*origin", который будет означать, что мы передаем тег origin. Для вставки в код этого тега воспользуемся функцией **xacro:insert_block**.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    ...
+
+    <xacro:macro name="wheel" params="prefix parent *origin">
+
+        <joint name="${prefix}_wheel_joint" type="continuous">
+            <parent link="${parent}"/>
+            <child link="${prefix}_wheel_link"/>
+            <axis xyz="0 1 0"/>
+            <dynamics damping="0.2"/>
+
+            <xacro:insert_block name="origin"/>
+        </joint>
+
+        ...
+
+    </xacro:macro>
+</robot>
+```
+
+Теперь присоединим колеса к нашей модели робота. Для этого в файле **urdf/robots/bmx.urdf.xacro** подключим созданный макрос и передадим необходимые аргументы. Рассчитаем положение каждого из колес следующим образом:
+1. Необходимо, чтобы колеса располагались с передней и задней частей робота. Сделаем это таким образом, чтобы крайние точки цилиндров не выходили на рамки базы. Длина базы - 0.5 м, радиус колеса - 0.1 м. Таким образом по оси Х нам нужно сдвинуть сустав от центра базы на 0.15 и на -0.15 м.
+2. Необходимо, чтобы колеса располагались по центру, таким образом по оси Y не сдвигаем сустав.
+3. Небходимо, чтобы по оси Z колеса были на уровне соединения base_footprint. Центр base_link находится на уровне 0.2 м от поверхности пола, радиус колеса - 0.1 м. Таким образом необходимо еще отступить 0.1 м вниз, чтобы колеса касались пола. 
+
+Получаем:
+
+```xml
+<?xml version="1.0"?>
+<robot name="bmx" xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:arg name="robot_name" default="bmx"/>
+    <xacro:arg name="robot_namespace" default="$(arg robot_name)"/>
+
+    <xacro:include filename="$(find bmx_description)/urdf/components/base/base.urdf.xacro" />
+    <xacro:include filename="$(find bmx_description)/urdf/components/wheels/wheel.urdf.xacro" />
+
+    <xacro:base />
+
+    <xacro:wheel prefix="front" parent="base_link">
+        <origin xyz="0.15 0 -0.1" rpy="0 0 0"/>
+    </xacro:wheel>
+
+    <xacro:wheel prefix="rear" parent="base_link">
+        <origin xyz="-0.15 0 -0.1" rpy="0 0 0"/>
+    </xacro:wheel>
+</robot>
+```
+
+### Вращательное движение (рулевое колесо)
+
+Переднее колесо робота должно иметь также ось вращения Z. Для этого создадим виртуальное колесо, которое:
+1. Будет дочерним к базе робота
+2. Иметь одну степень свободы по оси вращения Z
+3. Быть родительским по отношению к соединению переднего колеса
+
+Создадим макрос "steering_wheel", будем как и для основного колеса передавать название, имя родителя и положение относительно родителя. Укажем виртуальное соединение, которое имеет только коллизионную часть.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:macro name="steering_wheel" params="prefix parent *origin">
+
+        <link name="${prefix}_steering_wheel_link">
+            <collision>
+                <geometry>
+                    <cylinder length="0.001" radius="0.01"/>
+                </geometry>
+            </collision>
+            <inertial>
+                <mass value="0.01"/>
+                <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+            </inertial>
+        </link>
+    </xacro:macro>
+</robot>
+```
+
+Добавим сустав, который будет соединять базу и колесо.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:macro name="steering_wheel" params="prefix parent *origin">
+
+        <joint name="${prefix}_steering_wheel_joint" type="revolute">
+            <parent link="${parent}"/>
+            <child link="${prefix}_steering_wheel_link"/>
+            <axis xyz="0 0 1"/>
+            <limit effort="100.0" lower="-0.5" upper="0.5" velocity="10" />
+            <xacro:insert_block name="origin"/>
+
+        </joint>
+
+        ...
+    </xacro:macro>
+</robot>
+```
+
+Присоединим виртуальное колесо к базе.
+
+```xml
+<?xml version="1.0"?>
+<robot name="bmx" xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:arg name="robot_name" default="bmx"/>
+    <xacro:arg name="robot_namespace" default="$(arg robot_name)"/>
+
+    <xacro:include filename="$(find bmx_description)/urdf/components/base/base.urdf.xacro" />
+    <xacro:include filename="$(find bmx_description)/urdf/components/wheels/wheel.urdf.xacro" />
+    <xacro:include filename="$(find bmx_description)/urdf/components/wheels/steering_wheel.urdf.xacro" />
+
+    <xacro:base />
+
+    <xacro:steering_wheel prefix="front" parent="base_link">
+        <origin xyz="0.15 0 -0.1" rpy="0 0 0"/>
+    </xacro:steering_wheel>
+
+    <xacro:wheel prefix="front" parent="front_steering_wheel_link">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:wheel>
+
+    <xacro:wheel prefix="rear" parent="base_link">
+        <origin xyz="-0.15 0 -0.1" rpy="0 0 0"/>
+    </xacro:wheel>
 </robot>
 ```
 
@@ -243,6 +523,8 @@ def generate_launch_description():
 
 Опишем узел (node), который будет публиковать описание робота и трансформации между соединениями робота. Для этого создадим объект класса Node (подключив класс в шапке файла) и зададим его параметры.
 
+> robot_state_publisher преобразует показания суставов робота в трансформации (статические и динамические). Поэтому этот узел подписывается на топик **/clock** для указания времени трансформации
+
 ```python
 
 ...
@@ -299,7 +581,7 @@ source ~/nav_ws/install/setup.bash
 ros2 launch bmx_description description.launch.py
 ```
 
-После запуска launch-файла робот не запустился в Gazebo, как и не запустился сам Gazebo. Все потому, что мы не указали файл запуска для Gazebo и файл запуска для спавна нашего робота в Gazebo. 
+После запуска launch-файла робот не запустился в Gazebo, как и не запустился сам Gazebo. Все потому, что мы не указали файл запуска для Gazebo и файл запуска для спавна нашего робота в Gazebo.
 
 Мы можем проверить, правильно ли мы создали структуру робота и заполнили файлы. Для этого в новом терминале пропишем команду ```ros2 topic list```. Мы должны увидеть топики, публикующие URDF-описание робота (/bmx/robot_description), топики, публикующие трансформации между соединениями робота (/bmx/tf и /bmx/tf_static). Мы можем проверить наличие данных с помощью соответствующих команд.
 
