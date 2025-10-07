@@ -7,6 +7,8 @@
 - [Добавление колес](#добавление-колес)
   - [Линейное движение](#линейное-движение)
   - [Вращательное движение (рулевое колесо)](#вращательное-движение-рулевое-колесо)
+- [Добавление визуальной части робота](#добавление-визуальной-части-робота)
+- [Добавление датчиков](#добавление-датчиков)
 - [Настройка проекта](#настройка-проекта)
   - [Подготовка CMakeLists.txt](#подготовка-cmakeliststxt)
   - [Настройка файла запуска (launch)](#настройка-файла-запуска-launch)
@@ -428,6 +430,240 @@ bmx_description/
     <xacro:wheel prefix="rear" parent="base_link">
         <origin xyz="-0.15 0 -0.1" rpy="0 0 0"/>
     </xacro:wheel>
+</robot>
+```
+
+## Добавление визуальной части робота
+
+> К этому пункту можно вернуться позднее, убедившись, что робот успешно запускается в Gazebo
+
+Добавим визуальную модель для нашего робота. Для этого найдем необходимые модели в сети Интернет. Нам необходимы 3 составляющих: база, колесо и руль (рулевое колесо). Зачастую модель состоит из всех составляющих, которые нужно разъединить, например с помощью Blender.
+Возьмем подготовленные модели **base.dae**, **handlebar.dae** и **wheel.dae**.
+
+Добавим в *bmx_description/meshes* в соответствующие папки модели базы и колес. Теперь укажем эти модели в URDF. В **base.urdf.xacro** добавим в визуальной модели тег <\mesh\> и укажем путь до DAE модели, предварительно повернув ее и уменьшив масштаб с помощью аргумента "scale".
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:property name="base_height" value="0.3"/>
+    <xacro:property name="base_thickness" value="0.04"/>
+    <xacro:property name="base_length" value="0.5"/>
+    <xacro:property name="clearance" value="0.05"/>
+
+    <xacro:macro name="base">
+        
+        <link name="base_footprint"/>
+
+        <link name="base_link">
+            <visual>
+                <origin xyz="0 0 -0.04" rpy="0.0 0.0 ${pi/2}" />
+                <geometry>
+                    <mesh filename="file://$(find bmx_description)/meshes/base/base.dae" scale="0.1 0.055 0.055"/>
+                </geometry>
+            </visual>
+
+            ...
+        </link>
+
+        ...
+
+    </xacro:macro>
+</robot>
+```
+
+В **wheel.urdf.xacro** добавим в визуальной модели тег <\mesh\> и укажем путь до DAE модели. Для модели нужно будет отдельно настроить ее положение, чтобы оно соответствовало базе. В нашем случае мы поворачиваем модель на 90 гр. вокруг оси Z.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:property name="wheel_radius" value="0.1"/>
+    <xacro:property name="wheel_length" value="0.1"/>
+    <xacro:property name="wheel_mass" value="3.0"/>
+    
+    <xacro:macro name="wheel" params="prefix parent *origin">
+
+        ...
+
+        <link name="${prefix}_wheel_link">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/>
+                <geometry>
+                    <mesh filename="file://$(find bmx_description)/meshes/wheels/wheel.dae" scale="0.1 0.055 0.055"/>
+                </geometry>
+            </visual>
+            
+            ...
+        </link>
+
+    </xacro:macro>
+</robot>
+```
+
+Добавим визуальную часть также для рулевого колеса. В **steering_wheel.urdf.xacro** добавим в визуальной модели тег <\mesh\> и укажем путь до DAE модели. Также повернем модель на 90 гр. вокруг оси Z.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:macro name="steering_wheel" params="prefix parent *origin">
+
+        ...
+
+        <link name="${prefix}_steering_wheel_link">
+            <visual>
+                <origin xyz="0.005 0.0 -0.03" rpy="0 0.0 ${pi/2}"/>
+                <geometry>
+                    <mesh filename="file://$(find bmx_description)/meshes/wheels/handlebar.dae" scale="0.1 0.055 0.055"/>
+                </geometry>
+                <material name="wheel_material">
+                    <color rgba="0.0 0.0 0.0 1.0"/>
+                </material>
+            </visual>
+            ...
+        </link>
+
+    </xacro:macro>
+</robot>
+```
+
+## Добавление датчиков
+
+> К этому пункту можно вернуться позднее, убедившись, что робот успешно запускается в Gazebo
+
+Добавим дальномер к нашему роботу. Для этого сначала добавим сустав и соединение, которое будет представлять визуальную и коллизионную модель датчика.
+
+Добавим в *bmx_description/urdf/components/sensors* файл **lidar.urdf.xacro**. В макросе укажем входными аргументами имя датчика, название родительского соединения, пространство имен и положение датчика. 
+
+В качестве визуальной и коллизионной моделей укажем готовую модель датчика **hokuyo_urg_04lx_ug01.stl**. 
+
+```xml
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:macro name="lidar" params="prefix parent ns *origin">
+
+    <joint name="${prefix}_joint" type="fixed">
+        <parent link="${parent}"/>
+        <child link="${prefix}_link"/>
+        <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${prefix}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <mesh filename="file://$(find bmx_description)/meshes/sensors/hokuyo_urg_04lx_ug01.stl"/>
+        </geometry>
+      </visual>
+      <collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="file://$(find bmx_description)/meshes/sensors/hokuyo_urg_04lx_ug01.stl"/>
+			</geometry>
+	  </collision>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.1"/>
+        <inertia ixx="1.0" ixy="0.0" ixz="0.0"
+                 iyy="1.0" iyz="0.0"
+                 izz="1.0"/>
+      </inertial>
+    </link>
+
+  </xacro:macro>
+
+</robot>
+```
+
+Добавим плагин, который реализует датчик. Добавим в *bmx_description/urdf/components/plugins* файл **gz_lidar.urdf.xacro**. Будем передавать в макрос имя и пространство имен.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+	<xacro:macro name="gz_lidar" params="prefix namespace">
+
+		<gazebo reference="${prefix}_link">
+			<sensor name='${prefix}' type='gpu_lidar'>
+				<gz_frame_id>${prefix}_link</gz_frame_id>
+				<topic>${namespace}/scan</topic>
+				<update_rate>10</update_rate>
+				<ray>
+					<scan>
+						<horizontal>
+							<samples>720</samples>
+							<resolution>1</resolution>
+							<min_angle>-1.57</min_angle>
+							<max_angle>1.57</max_angle>
+						</horizontal>
+						<vertical>
+							<samples>1</samples>
+							<resolution>0.01</resolution>
+							<min_angle>0</min_angle>
+							<max_angle>0</max_angle>
+						</vertical>
+					</scan>
+					<range>
+						<min>0.1</min>
+						<max>10.0</max>
+						<resolution>0.01</resolution>
+					</range>
+				</ray>
+				<alwaysOn>1</alwaysOn>
+				<visualize>0</visualize>
+			</sensor>
+			<visual>
+				<material> <!-- Black -->
+					<ambient>0.1 0.1 0.1 1.0</ambient>
+					<diffuse>0.1 0.1 0.1 1.0</diffuse>
+					<specular>0.0 0.0 0.0 1.0</specular>
+					<emissive>0.0 0.0 0.0 1.0</emissive>
+				</material>
+    		</visual>
+		</gazebo>
+
+	</xacro:macro>
+
+</robot>
+```
+
+Поскольку плагин относится к конкретному соединению, будем вызывать макрос с плагином из макроса **lidar.urdf.xacro**.
+
+```xml
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find bmx_description)/urdf/components/plugins/gz_lidar.urdf.xacro"/>
+
+  <xacro:macro name="lidar" params="prefix parent ns *origin">
+
+    ...
+
+    <xacro:gz_lidar prefix="${prefix}" namespace="${ns}"/>
+
+  </xacro:macro>
+
+</robot>
+```
+
+Наконец присоединим наш датчик к базе. Для этого подключим и вызовем макрос в xacro-файле робота. Разместим дальномер в передней части робота.
+
+```xml
+<?xml version="1.0"?>
+<robot name="bmx" xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:arg name="robot_name" default="bmx"/>
+    <xacro:arg name="robot_namespace" default="$(arg robot_name)"/>
+    
+    ...
+    <xacro:include filename="$(find bmx_description)/urdf/components/sensors/lidar.urdf.xacro" />
+
+    ...
+
+    <xacro:lidar prefix="lidar" parent="base_link" ns="$(arg robot_namespace)">
+        <origin xyz="0.25 0.0 0.05" rpy="0.0 0.0 0.0"/>
+    </xacro:lidar>
 </robot>
 ```
 

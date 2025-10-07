@@ -7,6 +7,7 @@
 - [Настройка проекта](#настройка-проекта)
   - [Настройка файла запуска Gazebo](#настройка-файла-запуска-gazebo)
   - [Настройка файла спавна робота в Gazebo](#настройка-файла-спавна-робота-в-gazebo)
+  - [Настройка моста между ROS и Gazebo](#настройка-моста-между-ros-и-gazebo)
   - [Настройка файла одновременного запуска Gazebo и спавна робота](#настройка-файла-одновременного-запуска-gazebo-и-спавна-робота)
   - [Настройка контроллера для публикации положений суставов в ROS](#настройка-контроллера-для-публикации-положений-суставов-в-ros)
   - [Настройка CMakeLists.txt](#настройка-cmakeliststxt)
@@ -392,7 +393,7 @@ def generate_launch_description():
 	return ld
 ```
 
-Объявим и определеим аргументы файла запуска, необходимые для спавна робота: пространство имен (namespace) робота и его позицию (x, y, z_rot).
+Объявим и определим аргументы файла запуска, необходимые для спавна робота: пространство имен (namespace) робота и его позицию (x, y, z_rot).
 
 ```python
 
@@ -483,7 +484,6 @@ def generate_launch_description():
 
 ```
 
-
 После создания необходимых объектов добавим их выполнение в объект LaunchDescription.
 
 ```python
@@ -507,6 +507,67 @@ def generate_launch_description():
 	return ld
     ...
 ```
+
+### Настройка моста между ROS и Gazebo
+
+Для того, чтобы топики из Gazebo отправлялись в ROS, необходима настройка моста. В нашем случае нам необходимо передавать показания датчика из Gazebo в ROS. Создадим для этого файл **bridge.yaml** по пути *bmx_gazebo/config*. Добавим туда следующее:
+
+```yaml
+- ros_topic_name: "<robot_namespace>/scan"
+  gz_topic_name: "<robot_namespace>/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "ignition.msgs.LaserScan"
+  direction: GZ_TO_ROS
+```
+
+Добавим объявление файла конфигурации в файла спавна робота в Gazebo. Обозначим также ноду "parameter_bridge", которая и будет мостом.
+
+```python
+
+...
+from nav2_common.launch import ReplaceString
+
+def generate_launch_description():
+
+	...
+	bridge_file_path = LaunchConfiguration('bridge_file_path')
+
+	...
+
+	declare_bridge_file_path_cmd = DeclareLaunchArgument(
+		name='bridge_file_path',
+		default_value=os.path.join(get_package_share_directory('bmx_gazebo'), 'config', 'bridge.yaml'),
+		description='Bridge configuration'
+	)
+	...
+
+	namespaced_bridge_file_path = ReplaceString(
+        source_file=bridge_file_path,
+        replacements={'<robot_namespace>': ('/', namespace)}
+	)
+ 
+	gazebo_ros_bridge_cmd = Node(
+		package='ros_gz_bridge',
+		executable='parameter_bridge',
+		output='screen',
+		namespace=namespace,
+		parameters=[{'config_file': namespaced_bridge_file_path}]
+	)
+
+	...
+
+	ld = LaunchDescription()
+
+	...
+	ld.add_action(declare_bridge_file_path_cmd)
+
+	...
+	ld.add_action(gazebo_ros_bridge_cmd)
+
+	return ld
+    ...
+```
+
 
 ### Настройка файла одновременного запуска Gazebo и спавна робота 
 
