@@ -519,13 +519,19 @@ def generate_launch_description():
 
 ### Настройка моста между ROS и Gazebo
 
-Для того, чтобы топики из Gazebo отправлялись в ROS, необходима настройка моста. В нашем случае нам необходимо передавать показания датчика из Gazebo в ROS. Создадим для этого файл **bridge.yaml** по пути *bmx_gazebo/config*. Добавим туда следующее:
+Для того, чтобы топики из Gazebo отправлялись в ROS, необходима настройка моста. В нашем случае нам необходимо передавать показания датчика из Gazebo в ROS и время Gazebo. Создадим для этого файл **bridge.yaml** по пути *bmx_gazebo/config*. Добавим туда следующее:
 
 ```yaml
 - ros_topic_name: "<robot_namespace>/scan"
   gz_topic_name: "<robot_namespace>/scan"
   ros_type_name: "sensor_msgs/msg/LaserScan"
   gz_type_name: "ignition.msgs.LaserScan"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
   direction: GZ_TO_ROS
 ```
 
