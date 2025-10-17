@@ -819,13 +819,39 @@ ros2 launch bmx_description description.launch.py
 
 После запуска launch-файла робот не запустился в Gazebo, как и не запустился сам Gazebo. Все потому, что мы не указали файл запуска для Gazebo и файл запуска для спавна нашего робота в Gazebo.
 
-Мы можем проверить, правильно ли мы создали структуру робота и заполнили файлы. Для этого в новом терминале пропишем команду ```ros2 topic list```. Мы должны увидеть топики, публикующие URDF-описание робота (/bmx/robot_description), топики, публикующие трансформации между соединениями робота (/bmx/tf и /bmx/tf_static). Мы можем проверить наличие данных с помощью соответствующих команд.
+Мы можем проверить, правильно ли мы создали структуру робота и заполнили файлы. Для этого в новом терминале пропишем команду ```ros2 topic list```. Мы должны увидеть топики, публикующие URDF-описание робота (/bmx/robot_description), топики, публикующие трансформации между соединениями робота (/bmx/tf и /bmx/tf_static). 
+
+```bash
+$ ros2 topic list
+
+/bmx/joint_states
+/bmx/robot_description
+/bmx/tf
+/bmx/tf_static
+/parameter_events
+/rosout
+```
+
+Также мы можем проверить, что содержимое URDF публикуется в топик */bmx/robot_description* командой
+
+```bash
+# Получение URDF-файла робота
+ros2 topic echo /bmx/robot_description -f
+```
+
+Чтобы проверить наличие трансформаций между соединениями робота, используем ноду rqt_tf_tree. Для этого сначала установим соответствующий пакет:
 
 ```bash
 # Построение дерева соединений (links) робота
 sudo apt install ros-jazzy-rqt-tf-tree
-ros2 run rqt_tf_tree rqt_tf_tree --ros-args -r /tf:=/bmx/tf -r /tf_static:=/bmx/tf_static
-
-# Получение URDF-файла робота
-ros2 topic echo /bmx/robot_description -f
 ```
+
+Запустим узел, указав ремаппинг топиков из */tf* и */tf_static* (это топики по умолчанию) в */bmx/tf* и */bmx/tf_static*
+
+```bash
+ros2 run rqt_tf_tree rqt_tf_tree --ros-args -r /tf:=/bmx/tf -r /tf_static:=/bmx/tf_static
+```
+
+Получим дерево, состоящее из *base_footprint* и *base_link* (в случае подключения дальномера будет 3 системы координат).
+
+<img src="content/bmx_description_frames.svg" alt="drawing" width="800"/>

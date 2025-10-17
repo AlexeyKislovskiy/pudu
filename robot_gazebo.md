@@ -155,6 +155,12 @@ bmx_gazebo/
 
 Чтобы робот начал функционировать в Gazebo, необходимо подключить моторы и контроллеры.
 
+Прежде всего установим необходимые зависимости для работы с ROS2 Control и Gazebo Control.
+
+```bash
+sudo apt install ros-jazzy-gz-ros2-control ros-jazzy-ros2-control ros-jazzy-ros2-controllers
+```
+
 Колеса приводятся в действие моторами. Таким образом, чтобы привести в движение колесо, необходимо послать команду на мотор. В Gazebo моторы, как и другие элементы, задаются в URDF-файле. Добавим файл **control.urdf.xacro** в папку *bmx_description/urdf/components/plugins*. Опишем моторы внутри специального тега \<ros2_control\>. Напишем отдельный макрос для подключения моторов. Укажем интерфейс подключения к моторам - gz_ros2_control/GazeboSimSystem. Моторы укажем в отдельном макросе и будем передавать аргументом.
 
 ```xml
@@ -318,6 +324,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import DeclareLaunchArgument
 from launch import LaunchDescription
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     world_path = LaunchConfiguration('world_path')
@@ -400,6 +407,7 @@ def generate_launch_description():
 ...
 from launch.actions import DeclareLaunchArgument
 from launch import LaunchDescription
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
 
@@ -466,6 +474,7 @@ def generate_launch_description():
 ```python
 
 ...
+from launch_ros.actions import Node
 
 def generate_launch_description():
     ...
@@ -526,6 +535,7 @@ def generate_launch_description():
 
 ...
 from nav2_common.launch import ReplaceString
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
 
@@ -732,3 +742,20 @@ ament_package()
 source ~/nav_ws/install/setup.bash
 ros2 launch bmx_gazebo gazebo.launch.py
 ```
+
+В случае каких-либо ошибок в пакетах выполняем дополнительно команды
+
+```bash
+sudo apt update
+sudo apt upgrade
+```
+
+Если все пункты туториала выполнены, после запуска робота в Gazebo мы получим следующий граф трансформаций
+
+```bash
+ros2 run rqt_tf_tree rqt_tf_tree --ros-args -r /tf:=/bmx/tf -r /tf_static:=/bmx/tf_static
+```
+
+<img src="content/bmx_gazebo_frames.svg" alt="drawing" width="1000"/>
+
+

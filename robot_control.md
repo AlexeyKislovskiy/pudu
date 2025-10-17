@@ -4,6 +4,7 @@
 - [Создание проекта](#создание-проекта)
 - [Настройка конфигурации](#настройка-конфигурации)
 - [Настройка файла запуска контроллера](#настройка-файла-запуска-контроллера)
+- [Настройка плагина Gazebo](#настройка-плагина-gazebo)
 - [Настройка CMakeLists.txt](#настройка-cmakeliststxt)
 - [Запуск!](#запуск)
 
@@ -26,6 +27,12 @@ bmx_gazebo/
 ```
 
 ## Настройка конфигурации
+
+Прежде всего установим (если еще не установили) необходимые зависимости: контроллер bicycle_steering_controller, входящий в состав метапакета [ros2_controllers](https://github.com/ros-controls/ros2_controllers)
+
+```bash
+sudo apt install ros-jazzy-ros2-controllers
+```
 
 Перенесем файл **controllers.yaml** из проекта *bmx_gazebo*. Добавим в файл описание контроллера [bicycle_steering_controller](https://control.ros.org/rolling/doc/ros2_controllers/bicycle_steering_controller/doc/userdoc.html).
 
@@ -84,6 +91,7 @@ def generate_launch_description():
 ...
 from launch.actions import DeclareLaunchArgument
 from launch import LaunchDescription
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
 
@@ -104,7 +112,7 @@ def generate_launch_description():
 ```python
 
 ...
-from launch.actions import IncludeLaunchDescription
+from launch_ros.actions import Node
 
 def generate_launch_description():
     ...
@@ -151,6 +159,34 @@ def generate_launch_description():
 ```
 После настройки необходимо убрать запуск контроллера из [bmx_gazebo](robot_gazebo.md#настройка-контроллера-для-публикации-положений-суставов-в-ros), изменить путь до контроллеров в [URDF-файле плагина](robot_gazebo.md#настройка-моторов-и-контроллеров-робота).
 
+## Настройка плагина Gazebo
+
+По умолчанию контроллер будет публиковать одометрию и трансформацию в топики bicycle_steering_controller/odometry. Для того, чтобы выполнить ремаппинг в топики /bmx/tf и /bmx/odom, добавим соответствующие тэги в файл **gz_control.urdf.xacro** по пути *bmx_description/urdf/components/plugins*. Кроме того, не забудем поменять путь до файла контроллеров, с пакета *bmx_gazebo* на *bmx_control*.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+	<xacro:macro name="gz_control" params="namespace">
+
+		<gazebo>
+			<plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+				<parameters>$(find bmx_control)/config/controllers.yaml</parameters>
+
+				<ros>
+					<namespace>${namespace}</namespace>
+					<remapping>tf:=${namespace}/tf</remapping>
+					<remapping>tf_static:=${namespace}/tf_static</remapping>
+					<remapping>bicycle_steering_controller/odometry:=odom</remapping>
+					<remapping>bicycle_steering_controller/tf_odometry:=tf</remapping>
+				</ros>
+			</plugin>
+		</gazebo>
+		
+	</xacro:macro>
+
+</robot>
+```
 
 ## Настройка CMakeLists.txt
 
@@ -173,9 +209,72 @@ ament_package()
 
 ## Запуск!
 
-Файл запуска готов. Выполняем сборку проекта: ```colcon build```
-Запускаем launch-файл, указав пространство имен для терминала.
+Файл запуска готов. Выполняем сборку проекта
+```bash
+colcon build
+```
+
+Предварительно запускаем робота в Gazebo
+```bash
+ros2 launch bmx_gazebo bmx_gazebo.launch.py
+```
+
+Активируем контроллеры
 ```bash
 source ~/nav_ws/install/setup.bash
 ros2 launch bmx_control control.launch.py
+```
+
+Убедимся, что робот начал считать одометрию. Для этого в очередной раз воспользуемся пакетом для визуализации трансформаций между фреймами робота.
+
+```bash
+ros2 run rqt_tf_tree rqt_tf_tree --ros-args -r /tf:=/bmx/tf -r /tf_static:=/bmx/tf_static
+```
+
+<img src="content/bmx_control_frames.svg" alt="drawing" width="1000"/>
+
+Поскольку мы установили контроллер на робота, теперь мы им можем управлять. Для этого предварительно установим пакет, который позволит слать на робота команды управления
+
+```bash
+sudo apt install ros-jazzy-teleop-twist-keyboard
+```
+
+Запустим узел, сделав ремап из топика */cmd_vel* (узел по умолчанию читает из этого топика) в топик */bmx/bicycle_steering_controller/reference*. Топик */bmx/bicycle_steering_controller/reference* мы берем не случайно, именно из этого топика читает скорости контроллер; в этом можно убедиться, получив информацию об узле
+
+```bash
+$ ros2 node info /bmx/bicycle_steering_controller
+/bmx/bicycle_steering_controller
+  Subscribers:
+    /bmx/bicycle_steering_controller/reference: geometry_msgs/msg/TwistStamped
+    /clock: rosgraph_msgs/msg/Clock
+    /parameter_events: rcl_interfaces/msg/ParameterEvent
+  Publishers:
+    /bmx/bicycle_steering_controller/controller_state: control_msgs/msg/SteeringControllerStatus
+    /bmx/bicycle_steering_controller/transition_event: lifecycle_msgs/msg/TransitionEvent
+    /bmx/odom: nav_msgs/msg/Odometry
+    /bmx/tf: tf2_msgs/msg/TFMessage
+    /parameter_events: rcl_interfaces/msg/ParameterEvent
+    /rosout: rcl_interfaces/msg/Log
+  Service Servers:
+    /bmx/bicycle_steering_controller/describe_parameters: rcl_interfaces/srv/DescribeParameters
+    /bmx/bicycle_steering_controller/get_logger_levels: rcl_interfaces/srv/GetLoggerLevels
+    /bmx/bicycle_steering_controller/get_parameter_types: rcl_interfaces/srv/GetParameterTypes
+    /bmx/bicycle_steering_controller/get_parameters: rcl_interfaces/srv/GetParameters
+    /bmx/bicycle_steering_controller/get_type_description: type_description_interfaces/srv/GetTypeDescription
+    /bmx/bicycle_steering_controller/list_parameters: rcl_interfaces/srv/ListParameters
+    /bmx/bicycle_steering_controller/set_logger_levels: rcl_interfaces/srv/SetLoggerLevels
+    /bmx/bicycle_steering_controller/set_parameters: rcl_interfaces/srv/SetParameters
+    /bmx/bicycle_steering_controller/set_parameters_atomically: rcl_interfaces/srv/SetParametersAtomically
+  Service Clients:
+
+  Action Servers:
+
+  Action Clients:
+
+```
+
+Выполним запуск узла телеопа. Кроме ремапа укажем также флаг stamped=true. Этот флаг говорит о том, чтобы мы публиковали скорости с указанием времени публикации. По умолчанию контроллер ждет сообщения с указанием времени публикации.
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/bmx/bicycle_steering_controller/reference -p stamped:=true
 ```
