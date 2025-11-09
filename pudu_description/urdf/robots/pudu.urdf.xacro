@@ -4,6 +4,24 @@
     <xacro:arg name="robot_namespace" default="$(arg robot_name)"/>
 
     <xacro:include filename="$(find pudu_description)/urdf/components/base/base.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/wheels/wheel.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/wheels/steering_wheel.urdf.xacro" />
 
     <xacro:base />
+    
+    <xacro:steering_wheel prefix="front" parent="base_link">
+        <origin xyz="-0.3 0 -0.35" rpy="0 0 0"/>
+    </xacro:steering_wheel>
+    
+    <xacro:steering_wheel prefix="rear" parent="base_link">
+        <origin xyz="0.3 0 -0.35" rpy="0 0 0"/>
+    </xacro:steering_wheel>
+    
+    <xacro:wheel prefix="left" parent="base_link">
+        <origin xyz="0 -0.25 -0.3" rpy="0 0 0"/>
+    </xacro:wheel>
+
+    <xacro:wheel prefix="right" parent="base_link">
+        <origin xyz="0 0.25 -0.3" rpy="0 0 0"/>
+    </xacro:wheel>
 </robot>
