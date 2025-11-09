@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:macro name="gz_control" params="namespace">
+
+        <gazebo>
+            <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+                <parameters>$(find pudu_control)/config/controllers.yaml</parameters>
+
+                <ros>
+                    <namespace>${namespace}</namespace>
+                    <remapping>tf:=${namespace}/tf</remapping>
+                    <remapping>tf_static:=${namespace}/tf_static</remapping>
+                    <remapping>omni_wheel_drive_controller/odometry:=odom</remapping>
+                    <remapping>omni_wheel_drive_controller/tf_odometry:=tf</remapping>
+                </ros>
+            </plugin>
+        </gazebo>
+        
+    </xacro:macro>
+
+</robot>

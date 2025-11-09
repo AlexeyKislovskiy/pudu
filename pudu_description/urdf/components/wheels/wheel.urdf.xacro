@@ -3,7 +3,7 @@
 
     <xacro:property name="wheel_radius" value="0.1"/>
     <xacro:property name="wheel_length" value="0.05"/>
-    <xacro:property name="wheel_mass" value="3.0"/>
+    <xacro:property name="wheel_mass" value="1.0"/>
 
     <xacro:macro name="wheel" params="prefix parent *origin">
     
