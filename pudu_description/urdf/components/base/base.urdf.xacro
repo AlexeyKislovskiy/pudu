@@ -16,13 +16,13 @@
 
         <link name="base_link">
             <visual>
-                <origin xyz="0 0 0" rpy="0.0 0.0 0.0" />
+                <origin xyz="0 0 -0.37" rpy="0.0 0.0 ${pi/2}" />
                 <geometry>
-                    <box size="${base_length} ${base_width} ${base_height}"/>
+                    <mesh filename="file://$(find pudu_description)/meshes/base/base.dae" scale="${base_length} ${base_width} ${base_height}"/>
                 </geometry>
             </visual>
             <collision>
-                <origin xyz="0 0 0" rpy="0.0 0.0 0.0" />
+                <origin xyz="0 0 -0.37" rpy="0.0 0.0 0.0" />
                 <geometry>
                     <box size="${base_length} ${base_width} ${base_height}"/>
                 </geometry>

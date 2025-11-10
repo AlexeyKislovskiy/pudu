@@ -8,6 +8,7 @@
     <xacro:include filename="$(find pudu_description)/urdf/components/plugins/control.urdf.xacro" />
     <xacro:include filename="$(find pudu_description)/urdf/components/plugins/transmission.urdf.xacro" />
     <xacro:include filename="$(find pudu_description)/urdf/components/plugins/gz_control.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/sensors/lidar.urdf.xacro" />
 
     <xacro:base />
 
@@ -42,4 +43,8 @@
     </xacro:control>
 
     <xacro:gz_control namespace="$(arg robot_namespace)"/>
+    
+    <xacro:lidar prefix="lidar" parent="base_link" ns="$(arg robot_namespace)">
+        <origin xyz="0.25 0.0 2.9" rpy="0.0 0.0 0.0"/>
+    </xacro:lidar>
 </robot>
