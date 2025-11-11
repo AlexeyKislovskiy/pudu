@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<robot name="pudu" xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:arg name="robot_name" default="pudu"/>
+    <xacro:arg name="robot_namespace" default="$(arg robot_name)"/>
+
+    <xacro:include filename="$(find pudu_description)/urdf/components/base/base.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/wheels/wheel.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/plugins/control.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/plugins/transmission.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/plugins/gz_control.urdf.xacro" />
+    <xacro:include filename="$(find pudu_description)/urdf/components/sensors/lidar.urdf.xacro" />
+
+    <xacro:base />
+
+    <xacro:property name="wheel_x" value="${base_length/2 - 0.08}"/>
+    <xacro:property name="wheel_y" value="${base_width/2 - 0.08}"/>
+    <xacro:property name="wheel_z" value="${-base_height/2 - clearance + wheel_radius}"/>   
+    
+    <xacro:wheel prefix="front_left" parent="base_link">
+        <origin xyz="${wheel_x} ${wheel_y} ${wheel_z}" rpy="0 0 -0.785398"/>
+    </xacro:wheel>
+
+    <xacro:wheel prefix="rear_left" parent="base_link">
+        <origin xyz="-${wheel_x} ${wheel_y} ${wheel_z}" rpy="0 0 0.785398"/>
+    </xacro:wheel>
+
+    <xacro:wheel prefix="rear_right" parent="base_link">
+        <origin xyz="-${wheel_x} -${wheel_y} ${wheel_z}" rpy="0 0 2.35617"/>
+    </xacro:wheel>
+
+    <xacro:wheel prefix="front_right" parent="base_link">
+        <origin xyz="${wheel_x} -${wheel_y} ${wheel_z}" rpy="0 0 -2.35617"/>
+    </xacro:wheel>
+
+
+     <xacro:control>
+        <transmissions>
+            <xacro:transmission joint="front_left_wheel_joint"/>
+            <xacro:transmission joint="front_right_wheel_joint"/>
+            <xacro:transmission joint="rear_left_wheel_joint"/>
+            <xacro:transmission joint="rear_right_wheel_joint"/>
+        </transmissions>
+    </xacro:control>
+
+    <xacro:gz_control namespace="$(arg robot_namespace)"/>
+    
+    <xacro:lidar prefix="lidar" parent="base_link" ns="$(arg robot_namespace)">
+        <origin xyz="0.0 0.0 0.5" rpy="0.0 0.0 0.0"/>
+    </xacro:lidar>
+</robot>
