@@ -45,6 +45,6 @@
     <xacro:gz_control namespace="$(arg robot_namespace)"/>
     
     <xacro:lidar prefix="lidar" parent="base_link" ns="$(arg robot_namespace)">
-        <origin xyz="0.25 0.0 2.9" rpy="0.0 0.0 0.0"/>
+        <origin xyz="0.0 0.0 0.5" rpy="0.0 0.0 0.0"/>
     </xacro:lidar>
 </robot>

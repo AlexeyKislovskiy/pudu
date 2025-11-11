@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-    <xacro:property name="base_length" value="0.663"/>
-    <xacro:property name="base_width" value="0.568"/>
-    <xacro:property name="base_height" value="0.682"/>
+    <xacro:property name="base_length" value="0.6"/>
+    <xacro:property name="base_width" value="0.6"/>
+    <xacro:property name="base_height" value="0.9"/>
     <xacro:property name="clearance" value="0.05"/>
     <xacro:property name="mass" value="60.0"/> 
 
@@ -16,13 +16,13 @@
 
         <link name="base_link">
             <visual>
-                <origin xyz="0 0 -0.37" rpy="0.0 0.0 ${pi/2}" />
+                <origin xyz="0 0 -0.59" rpy="0.0 0.0 ${pi/2}" />
                 <geometry>
-                    <mesh filename="file://$(find pudu_description)/meshes/base/base.dae" scale="${base_length} ${base_width} ${base_height}"/>
+                    <mesh filename="file://$(find pudu_description)/meshes/base/base.dae" scale="0.4 0.4 0.2"/>
                 </geometry>
             </visual>
             <collision>
-                <origin xyz="0 0 -0.37" rpy="0.0 0.0 0.0" />
+                <origin xyz="0 0 0" rpy="0.0 0.0 0.0" />
                 <geometry>
                     <box size="${base_length} ${base_width} ${base_height}"/>
                 </geometry>
