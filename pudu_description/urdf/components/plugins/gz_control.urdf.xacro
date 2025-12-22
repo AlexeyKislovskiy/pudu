@@ -11,8 +11,8 @@
                     <namespace>${namespace}</namespace>
                     <remapping>tf:=${namespace}/tf</remapping>
                     <remapping>tf_static:=${namespace}/tf_static</remapping>
-                    <remapping>omni_wheel_drive_controller/odometry:=odom</remapping>
-                    <remapping>omni_wheel_drive_controller/tf_odometry:=tf</remapping>
+                    <remapping>omni_wheel_drive_controller/odom:=odom</remapping>
+                    <remapping>/tf:=tf</remapping>
                 </ros>
             </plugin>
         </gazebo>
