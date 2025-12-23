@@ -1,0 +1,42 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="2" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithDynamicPlanning">
+        
+        <RateController hz="5.0">
+          <Fallback name="GlobalPlanningProcess">
+            <Sequence name="ComputeAndValidatePath">
+              <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased" server_timeout="2.0"/>
+              <IsPathValid path="{path}"/> 
+            </Sequence>
+            
+            <RetryUntilSuccessful num_attempts="2">
+              <Sequence name="ClearingSequence">
+                <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+                <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+              </Sequence>
+            </RetryUntilSuccessful>
+          </Fallback>
+        </RateController>
+
+        <Fallback name="LocalControlFallback">
+          <FollowPath path="{path}" controller_id="MPPI"/>
+          <FollowPath path="{path}" controller_id="DWB"/>
+        </Fallback>
+
+      </PipelineSequence>
+
+      <Sequence name="RecoveryActions">
+        <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+        <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+        <Wait wait_duration="1.0"/>
+        <BackUp backup_dist="0.2" backup_speed="0.1"/>
+        
+        <DistanceController distance="1.0">
+             <AlwaysSuccess/>
+        </DistanceController>
+      </Sequence>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>
+
