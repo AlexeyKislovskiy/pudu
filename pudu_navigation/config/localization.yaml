@@ -11,6 +11,7 @@ lifecycle_manager_localization:
         bond_timeout: 4.0
         attempt_respawn_reconnection: true
         bond_respawn_max_duration: 10.0
+        use_sim_time: True
         
 amcl:
     ros__parameters:

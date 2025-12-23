@@ -91,13 +91,20 @@ def generate_launch_description():
         source_file=bridge_file_path,
         replacements={'<robot_namespace>': ('/', namespace)}
     )
+    
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    
+    declare_use_sim_time_cmd = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true')
  
     gazebo_ros_bridge_cmd = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
         output='screen',
         namespace=namespace,
-        parameters=[{'config_file': namespaced_bridge_file_path}]
+        parameters=[{'config_file': namespaced_bridge_file_path, 'use_sim_time': use_sim_time}]
     )
 
     ld = LaunchDescription()

@@ -13,6 +13,7 @@
                     <remapping>tf_static:=${namespace}/tf_static</remapping>
                     <remapping>omni_wheel_drive_controller/odom:=odom</remapping>
                     <remapping>/tf:=tf</remapping>
+                    <parameter name="use_sim_time" type="bool">true</parameter>
                 </ros>
             </plugin>
         </gazebo>

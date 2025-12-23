@@ -98,6 +98,16 @@ def generate_launch_description():
         arguments=[],
         remappings=remappings + [('cmd_vel', 'omni_wheel_drive_controller/cmd_vel')],
     )
+    
+    smoother_cmd = Node(
+        package='nav2_smoother',
+        executable='smoother_server',
+        name='smoother_server',
+        output='screen',
+        parameters=[configured_params],
+        namespace=namespace
+)
+
 
     ld = LaunchDescription()
     
@@ -107,6 +117,7 @@ def generate_launch_description():
     ld.add_action(planner_cmd)
     ld.add_action(controller_cmd)
     ld.add_action(behavior_cmd)
+    ld.add_action(smoother_cmd)
     ld.add_action(lifecycle_manager_cmd)
 
     return ld

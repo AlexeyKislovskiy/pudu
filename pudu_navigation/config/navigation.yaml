@@ -10,6 +10,7 @@ bt_navigator:
     wait_for_service_timeout: 1000
     action_server_result_timeout: 900.0
     navigators: ["navigate_to_pose"]
+    default_nav_to_pose_bt_xml: $(find-pkg-share pudu_navigation)/config/nav2_bt_navigator/navigate_to_pose_w_recovery.xml
     navigate_to_pose:
       plugin: nav2_bt_navigator::NavigateToPoseNavigator
       
@@ -33,6 +34,16 @@ planner_server:
           max_iterations: 1000000      
           max_planning_time: 2.0       
           downsample_factor: 1
+          
+smoother_server:
+  ros__parameters:
+    use_sim_time: True
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: True
           
 global_costmap:
   global_costmap:
@@ -67,7 +78,7 @@ global_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         enabled: true
-        inflation_radius: 0.55
+        inflation_radius: 0.25
         cost_scaling_factor: 1.0
         inflate_unknown: false
         inflate_around_unknown: true
@@ -91,7 +102,7 @@ controller_server:
       odom_topic: <robot_namespace>/odom
       progress_checker_plugins: ["progress_checker"]
       goal_checker_plugins: ["goal_checker"]
-      controller_plugins: ["FollowPath"]
+      controller_plugins: ["DWB", "MPPI"]
       use_realtime_priority: false
       progress_checker:
         plugin: nav2_controller::SimpleProgressChecker
@@ -102,7 +113,50 @@ controller_server:
         xy_goal_tolerance: 0.25
         yaw_goal_tolerance: 3.14
         stateful: True
-      FollowPath:
+      DWB:
+        plugin: "dwb_core::DWBLocalPlanner"
+        debug_trajectory_details: True
+        # минимальные и максимальные скорости по осям X, Y и оси вращения Z
+        min_vel_x: -0.3
+        min_vel_y: -0.3
+        max_vel_x: 0.3
+        max_vel_y: 0.3
+        max_vel_theta: 1.0
+        min_speed_xy: -0.3
+        max_speed_xy: 0.3
+        min_speed_theta: 0.0
+        # минимальные и максимальные значения ускорения и торможения робота
+        acc_lim_x: 2.5
+        acc_lim_y: 0.0
+        acc_lim_theta: 3.2
+        decel_lim_x: -2.5
+        decel_lim_y: 0.0
+        decel_lim_theta: -3.2
+        # параметры для генерации скоростей: размер выборки скоростей по всем осям
+        vx_samples: 20
+        vy_samples: 5
+        vtheta_samples: 20
+        # горизонт планирования и шаг планирования
+        sim_time: 1.7
+        linear_granularity: 0.05
+        angular_granularity: 0.025
+        transform_tolerance: 0.2
+        xy_goal_tolerance: 0.25
+        trans_stopped_velocity: 0.25
+        short_circuit_trajectory_evaluation: True
+        # параметры критиков
+        critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+        BaseObstacle.scale: 0.02
+        PathAlign.scale: 32.0
+        GoalAlign.scale: 24.0
+        PathAlign.forward_point_distance: 0.1
+        GoalAlign.forward_point_distance: 0.1
+        PathDist.scale: 32.0
+        GoalDist.scale: 24.0
+        RotateToGoal.scale: 32.0
+        RotateToGoal.slowing_factor: 5.0
+        RotateToGoal.lookahead_time: -1.0
+      MPPI:
         plugin: "nav2_mppi_controller::MPPIController"
         time_steps: 56
         model_dt: 0.05
@@ -117,7 +171,7 @@ controller_server:
         wz_std: 0.4
         vx_max: 0.5
         vx_min: -0.35
-        vy_max: 0.5
+        vy_max: 0.0
         wz_max: 1.9
         iteration_count: 1
         prune_distance: 1.7
@@ -220,7 +274,7 @@ local_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         enabled: true
-        inflation_radius: 0.55
+        inflation_radius: 0.25
         cost_scaling_factor: 1.0
         inflate_unknown: false
         inflate_around_unknown: true
@@ -235,13 +289,15 @@ behavior_server:
       local_footprint_topic: local_costmap/published_footprint
       global_footprint_topic: global_costmap/published_footprint
       cycle_frequency: 10.0
-      behavior_plugins: ["spin", "backup", "wait"]
+      behavior_plugins: ["spin", "backup", "wait", "drive_on_heading"]
       spin:
         plugin: nav2_behaviors::Spin
       backup:
         plugin: nav2_behaviors::BackUp
       wait:
         plugin: nav2_behaviors::Wait
+      drive_on_heading:
+        plugin: nav2_behaviors::DriveOnHeading
       local_frame: odom
       global_frame: map
       robot_base_frame: base_footprint
