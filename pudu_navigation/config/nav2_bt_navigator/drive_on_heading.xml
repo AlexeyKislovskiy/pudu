@@ -1,5 +1,0 @@
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <DriveOnHeading dist_to_travel="1.0" speed="0.2" server_name="drive_on_heading" server_timeout="10"/>
-  </BehaviorTree>
-</root>

@@ -1,8 +1,0 @@
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <Sequence>
-      <DriveOnHeading dist_to_travel="1.0" speed="0.2" server_name="drive_on_heading" server_timeout="10"/>
-      <BackUp backup_dist="1.0" backup_speed="0.2" server_name="backup" server_timeout="10"/>
-    </Sequence>
-  </BehaviorTree>
-</root>
